@@ -1,0 +1,11 @@
+[package]
+name = "uefiloader"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "0.4"
+uefi-services = "0.21"
+uefi = "0.24"
