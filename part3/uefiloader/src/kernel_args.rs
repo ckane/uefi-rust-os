@@ -1,6 +1,8 @@
 use core::ffi::c_void;
 use uefi::table::cfg::{ACPI_GUID, ACPI2_GUID, ConfigTableEntry, SMBIOS_GUID, SMBIOS3_GUID};
 
+use crate::Console;
+
 pub struct OSMemEntry {
     pub ty: uefi::table::boot::MemoryType,
     pub base: usize,
@@ -30,6 +32,9 @@ pub struct KernelArgs {
 
     /// The number of entries in the slice pointed at by memmap_ptr
     memmap_entries: usize,
+
+    /// The pointer to the Console object
+    console_ptr: *mut Console,
 }
 
 // Initially populate an empty struct with every value set to 0. We cannot derive this
@@ -44,6 +49,7 @@ impl Default for KernelArgs {
             pcie_ptr: core::ptr::null_mut(),
             memmap_ptr: core::ptr::null_mut(),
             memmap_entries: 0,
+            console_ptr: core::ptr::null_mut(),
         }
     }
 }
@@ -121,5 +127,15 @@ impl KernelArgs {
     /// Returns the number of entries pointed at by the MemMap pointer
     pub fn get_memmap_entries(&self) -> usize {
         self.memmap_entries
+    }
+
+    /// Sets the Console pointer
+    pub fn set_console(&mut self, ptr: *mut Console) {
+        self.console_ptr = ptr;
+    }
+
+    /// Returns the Console pointer
+    pub fn get_console(&self) -> *mut Console {
+        self.console_ptr
     }
 }

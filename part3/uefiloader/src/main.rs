@@ -229,6 +229,9 @@ fn hello_main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Stat
     // Write "Hello from Graphics" to the upper-left corner of the screen
     let _ = con.write_str("Hello from Graphics", 0, 9);
 
+    // Place the console pointer into the KernelArgs
+    karg.set_console(&mut con);
+
     // Wait for another keypress after setting the mode, so we can see it worked
     wait_for_keypress(&mut system_table).unwrap();
 
