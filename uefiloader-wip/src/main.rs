@@ -92,7 +92,7 @@ fn set_mode(st: &SystemTable<Boot>) -> FrameBuffer {
 
     // Iterate across all the modes - if a mode that is within our bounds, but larger than
     // the previous largest mode is identified, then set that as the new preferred mode
-    for (i, m) in gfx.modes(st.boot_services()).enumerate() {
+    for (i, m) in gfx.modes().enumerate() {
         let mode = m.info();
         // Only want 24-bit RGB modes
         if mode.pixel_format() == uefi::proto::console::gop::PixelFormat::Rgb
@@ -110,7 +110,7 @@ fn set_mode(st: &SystemTable<Boot>) -> FrameBuffer {
     }
 
     // At the end of the loop, curmode contains the numeric index of the best-fit mode
-    let newmode = gfx.modes(st.boot_services()).nth(curmode as usize).unwrap();
+    let newmode = gfx.modes().nth(curmode as usize).unwrap();
 
     // This sets the graphics mode
     gfx.set_mode(&newmode);

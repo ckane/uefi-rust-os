@@ -12,4 +12,4 @@ raw-cpuid = "11"
 goblin = { version = "0.8", default-features = false, features = ["elf64", "elf32", "pe32", "pe64"] }
 embedded-graphics = "0.8"
 log = "0.4"
-uefi = { version = "0.31", features = ["global_allocator", "logger", "panic_handler"] }
+uefi = { version = "0.32", features = ["global_allocator", "logger", "panic_handler"] }

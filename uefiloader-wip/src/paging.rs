@@ -17,7 +17,7 @@ const NULL_PDE: usize = 0x0000000000000000;
 const SUP_PAGE: usize = 0x0000000000000003;
 const SUP_HUGE_PAGE: usize = 0x0000000000000083;
 
-#[derive(Copy,Clone,Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct PDEntry(usize);
 
 impl PDEntry {
@@ -63,7 +63,7 @@ impl PDEntry {
     }
     pub fn set_writable(&mut self, w: bool) {
         if w {
-            self.0 |= 2 
+            self.0 |= 2
         } else {
             self.0 &= !2
         };
