@@ -1,0 +1,15 @@
+[package]
+name = "uefiloader"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+acpi = "5"
+raw-cpuid = "11"
+#elf = { version = "0.7", default-features = false }
+goblin = { version = "0.8", default-features = false, features = ["elf64", "elf32", "pe32", "pe64"] }
+embedded-graphics = "0.8"
+log = "0.4"
+uefi = { version = "0.31", features = ["global_allocator", "logger", "panic_handler"] }

@@ -1,0 +1,6 @@
+Cargo.lock
+/target
+testdata.o
+testdata.bin
+kerntest.o
+kerntest
