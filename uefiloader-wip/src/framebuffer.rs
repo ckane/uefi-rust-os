@@ -5,7 +5,7 @@ use embedded_graphics::{
     mono_font::{ascii::FONT_6X10, MonoTextStyle},
     pixelcolor::Rgb888,
     prelude::*,
-    primitives::{rectangle::Rectangle},
+    primitives::rectangle::Rectangle,
     text::Text,
     Pixel,
 };
@@ -112,7 +112,7 @@ impl Write for FrameBuffer {
 
 impl FrameBuffer {
     pub fn clear_console(&mut self) {
-        self.clear(Rgb888::new(0, 0, 0));
+        let _ = self.clear(Rgb888::new(0, 0, 0));
         self.txtcur_x = 0;
         self.txtcur_y = 0;
     }
@@ -154,12 +154,17 @@ impl FrameBuffer {
     fn scroll_one(&mut self) {
         let src_range = Rectangle {
             top_left: Point { x: 0, y: 10 },
-            size: Size { width: self.fx as u32, height: self.fy as u32 - 10 },
+            size: Size {
+                width: self.fx as u32,
+                height: self.fy as u32 - 10,
+            },
         };
         self.s2s_blit(src_range, Point { x: 0, y: 0 });
         let fb = unsafe { core::slice::from_raw_parts_mut(self.fbptr, self.fbsize) };
         let blk_offset = (self.fy - 20) * self.stride * 4;
-        fb.get_mut(blk_offset..(self.fy * self.stride * 4)).unwrap().fill(0);
+        fb.get_mut(blk_offset..(self.fy * self.stride * 4))
+            .unwrap()
+            .fill(0);
     }
 
     pub fn s2s_blit(&mut self, src_rect: Rectangle, dst_top_left: Point) {
@@ -175,7 +180,8 @@ impl FrameBuffer {
                 yoffs
             };
             let old_offset = ((tly + ypos) * (self.stride * 4)) + (tlx * 4);
-            let new_offset = ((dst_top_left.y as usize + ypos) * (self.stride * 4)) + (dst_top_left.x as usize * 4);
+            let new_offset = ((dst_top_left.y as usize + ypos) * (self.stride * 4))
+                + (dst_top_left.x as usize * 4);
             fb.copy_within(old_offset..(old_offset + (maxw * 4)), new_offset);
         }
     }
