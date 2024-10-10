@@ -562,6 +562,18 @@ fn hello_main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Stat
 
             write!(karg.get_fb(), "PML4({:#018x}) PDPT({:#018x})\n", pml4_ptr as usize, pdpt_ptr as usize).unwrap();
             wait_for_keypress(&mut system_table).unwrap();
+
+            let karg_copy_ptr = system_table
+                .boot_services()
+                .allocate_pool(uefi::table::boot::MemoryType::RUNTIME_SERVICES_DATA, core::mem::size_of::<KernelArgs>())
+                .unwrap().as_ptr() as *mut KernelArgs;
+
+            // Get the updated MemoryMap table
+            unsafe { system_table.boot_services().free_pool(mm_ptr as *mut u8).unwrap() };
+            (mm_ptr, mm_count) = get_mm(&system_table);
+            karg.set_memmap(mm_ptr, mm_count);
+            let _ = unsafe { system_table.exit_boot_services(uefi::table::boot::MemoryType::RUNTIME_SERVICES_DATA) };
+
             unsafe {
                 asm!(
                     "cli",
@@ -589,18 +601,9 @@ fn hello_main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Stat
                 write!(karg.get_fb(), "{:02x}-", unsafe { *bptr }).unwrap();
             };
             write!(karg.get_fb(), "\n").unwrap();
-            let karg_copy_ptr = system_table
-                .boot_services()
-                .allocate_pool(uefi::table::boot::MemoryType::RUNTIME_SERVICES_DATA, core::mem::size_of::<KernelArgs>())
-                .unwrap().as_ptr() as *mut KernelArgs;
-
-            // Get the updated MemoryMap table
-            unsafe { system_table.boot_services().free_pool(mm_ptr as *mut u8).unwrap() };
-            (mm_ptr, mm_count) = get_mm(&system_table);
-            karg.set_memmap(mm_ptr, mm_count);
             //karg.get_fb().clear_console();
             unsafe { *karg_copy_ptr = karg };
-            let _ = unsafe { system_table.exit_boot_services(uefi::table::boot::MemoryType::RUNTIME_SERVICES_DATA) };
+            write!(karg.get_fb(), "Now jumping\n").unwrap();
 
             unsafe { asm!(
                 "mov rax, {ka}",
