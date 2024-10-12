@@ -528,23 +528,9 @@ fn hello_main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Stat
 
             pml4_slice[(base_addr as usize >> 39) & 0x1ff] = paging::PDEntry::from_paddr(kpdpt_ptr as usize);
 
-            // Allocate kernel image PDT table
-            let kpdt_ptr = system_table
-                .boot_services()
-                .allocate_pages(
-                    uefi::table::boot::AllocateType::AnyPages,
-                    uefi::table::boot::MemoryType::RUNTIME_SERVICES_DATA,
-                    1,
-                )
-                .unwrap() as *mut paging::PDEntry;
-            let kpdt_slice = unsafe { core::slice::from_raw_parts_mut::<paging::PDEntry>(kpdt_ptr, 512) };
-            kpdt_slice.fill(paging::PDEntry::new_null());
-
-            kpdpt_slice[0] = paging::PDEntry::from_paddr(kpdt_ptr as usize);
-
-            // Allocate kernel image page table
-            for j in 0..=(bootstrap_pages / 512) {
-                let kpt_ptr = system_table
+            for k in 0..=(bootstrap_pages >> 18) {
+                // Allocate kernel image PDT table
+                let kpdt_ptr = system_table
                     .boot_services()
                     .allocate_pages(
                         uefi::table::boot::AllocateType::AnyPages,
@@ -552,15 +538,31 @@ fn hello_main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Stat
                         1,
                     )
                     .unwrap() as *mut paging::PDEntry;
+                let kpdt_slice = unsafe { core::slice::from_raw_parts_mut::<paging::PDEntry>(kpdt_ptr, 512) };
+                kpdt_slice.fill(paging::PDEntry::new_null());
 
-                let kpt_slice = unsafe { core::slice::from_raw_parts_mut::<paging::PDEntry>(kpt_ptr, 512) };
-                kpt_slice.fill(paging::PDEntry::new_null());
+                kpdpt_slice[k] = paging::PDEntry::from_paddr(kpdt_ptr as usize);
 
-                kpdt_slice[j] = paging::PDEntry::from_paddr(kpt_ptr as usize);
+                // Allocate kernel image page table
+                for j in 0..=(bootstrap_pages >> 9) {
+                    let kpt_ptr = system_table
+                        .boot_services()
+                        .allocate_pages(
+                            uefi::table::boot::AllocateType::AnyPages,
+                            uefi::table::boot::MemoryType::RUNTIME_SERVICES_DATA,
+                            1,
+                        )
+                        .unwrap() as *mut paging::PDEntry;
 
-                for i in 0..512 {
-                    kpt_slice[i] = paging::PDEntry::from_paddr(kernel_ptr as usize + (i * 0x1000) + (j << 21));
-                };
+                    let kpt_slice = unsafe { core::slice::from_raw_parts_mut::<paging::PDEntry>(kpt_ptr, 512) };
+                    kpt_slice.fill(paging::PDEntry::new_null());
+
+                    kpdt_slice[j] = paging::PDEntry::from_paddr(kpt_ptr as usize);
+
+                    for i in 0..512 {
+                        kpt_slice[i] = paging::PDEntry::from_paddr(kernel_ptr as usize + (i * 0x1000) + (j << 21));
+                    };
+                }
             }
 
             write!(karg.get_fb(), "PML4({:#018x}) PDPT({:#018x})\n", pml4_ptr as usize, pdpt_ptr as usize).unwrap();
