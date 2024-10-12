@@ -543,22 +543,25 @@ fn hello_main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Stat
             kpdpt_slice[0] = paging::PDEntry::from_paddr(kpdt_ptr as usize);
 
             // Allocate kernel image page table
-            let kpt_ptr = system_table
-                .boot_services()
-                .allocate_pages(
-                    uefi::table::boot::AllocateType::AnyPages,
-                    uefi::table::boot::MemoryType::RUNTIME_SERVICES_DATA,
-                    1,
-                )
-                .unwrap() as *mut paging::PDEntry;
-            let kpt_slice = unsafe { core::slice::from_raw_parts_mut::<paging::PDEntry>(kpt_ptr, 512) };
-            kpt_slice.fill(paging::PDEntry::new_null());
+            for j in 0..=(bootstrap_pages / 512) {
+                let kpt_ptr = system_table
+                    .boot_services()
+                    .allocate_pages(
+                        uefi::table::boot::AllocateType::AnyPages,
+                        uefi::table::boot::MemoryType::RUNTIME_SERVICES_DATA,
+                        1,
+                    )
+                    .unwrap() as *mut paging::PDEntry;
 
-            kpdt_slice[0] = paging::PDEntry::from_paddr(kpt_ptr as usize);
+                let kpt_slice = unsafe { core::slice::from_raw_parts_mut::<paging::PDEntry>(kpt_ptr, 512) };
+                kpt_slice.fill(paging::PDEntry::new_null());
 
-            for i in 0..=bootstrap_pages {
-                kpt_slice[i] = paging::PDEntry::from_paddr(kernel_ptr as usize + (i * 0x1000));
-            };
+                kpdt_slice[j] = paging::PDEntry::from_paddr(kpt_ptr as usize);
+
+                for i in 0..512 {
+                    kpt_slice[i] = paging::PDEntry::from_paddr(kernel_ptr as usize + (i * 0x1000) + (j << 21));
+                };
+            }
 
             write!(karg.get_fb(), "PML4({:#018x}) PDPT({:#018x})\n", pml4_ptr as usize, pdpt_ptr as usize).unwrap();
             wait_for_keypress(&mut system_table).unwrap();
