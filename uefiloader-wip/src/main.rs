@@ -442,17 +442,35 @@ fn hello_main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Stat
                 true => write!(karg.get_fb(), "CPU supports 1GiB pages\n").unwrap(),
                 false => write!(karg.get_fb(), "CPU DOESN'T support 1GiB pages\n").unwrap(),
             };
+            let mut cr0_content = 0;
+            let mut cr3_content = 0;
             let mut cr4_content = 0;
+            let mut ripval = 0;
+            let mut rspval = 0;
 
             // This turns on PSE so we can use 1GiB pages
             unsafe { asm!(
+                "mov {cval}, cr0",
+                "mov {pgval}, cr3",
+                "call 22f+rip",
+                "22:",
+                "pop {ripval}",
+                "mov {rspval}, rsp",
                 "mov {val}, cr4",
                 "or {val},0x00000010",
                 "mov cr4, {val}",
                 "mov {val}, cr4",
+                cval = out(reg) cr0_content,
+                pgval = out(reg) cr3_content,
+                ripval = out(reg) ripval,
+                rspval = out(reg) rspval,
                 val = out(reg) cr4_content,
             )};
+            write!(karg.get_fb(), "CR0: {:#018x}\n", cr0_content).unwrap();
+            write!(karg.get_fb(), "CR3: {:#018x}\n", cr3_content).unwrap();
             write!(karg.get_fb(), "CR4: {:#018x}\n", cr4_content).unwrap();
+            write!(karg.get_fb(), "RIP: {:#018x}\n", ripval).unwrap();
+            write!(karg.get_fb(), "RSP: {:#018x}\n", rspval).unwrap();
 
             // Allocate the new PML4 table
             let pml4_ptr = system_table
@@ -567,6 +585,7 @@ fn hello_main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Stat
 
             write!(karg.get_fb(), "PML4({:#018x}) PDPT({:#018x})\n", pml4_ptr as usize, pdpt_ptr as usize).unwrap();
             wait_for_keypress(&mut system_table).unwrap();
+            write!(karg.get_fb(), "Key pressed, continuing...\n").unwrap();
 
             let karg_copy_ptr = system_table
                 .boot_services()
@@ -578,6 +597,7 @@ fn hello_main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Stat
             (mm_ptr, mm_count) = get_mm(&system_table);
             karg.set_memmap(mm_ptr, mm_count);
             let _ = unsafe { system_table.exit_boot_services(uefi::table::boot::MemoryType::RUNTIME_SERVICES_DATA) };
+            write!(karg.get_fb(), "Swapping page tables\n").unwrap();
 
             unsafe {
                 asm!(
