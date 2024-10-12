@@ -500,18 +500,45 @@ fn hello_main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Stat
             pml4_slice[0] = paging::PDEntry::from_paddr(pdpt_ptr as usize);
 
             // TODO: for now statically embed 64GB as the upper limit of physical mem
-            let phys_max = 0x10_0000_0000usize;
+            //let phys_max = 0x10_0000_0000usize;
+            let phys_max = 0x4_0000_0000usize;
 
-            // Next, iterate for each 1GB of phys_max, and create a corresponding entry in PDPT
-            for i in 0..(phys_max / 0x4000_0000usize) {
+            // Next, iterate for each 1GB of RAM, and create a corresponding entry in PDPT
+            //for i in 0..(phys_max / 0x4000_0000usize) {
+            for i in 0..512 {
                 pdpt_slice[i] = paging::PDEntry::huge_from_paddr(i * 0x4000_0000);
             };
 
+            // Allocate second PDPT table
+            let pdpt_ptr = system_table
+                .boot_services()
+                .allocate_pages(
+                    uefi::table::boot::AllocateType::AnyPages,
+                    uefi::table::boot::MemoryType::RUNTIME_SERVICES_DATA,
+                    1,
+                )
+                .unwrap() as *mut paging::PDEntry;
+            let mut pdpt_slice = unsafe { core::slice::from_raw_parts_mut::<paging::PDEntry>(pdpt_ptr, 512) };
+            pdpt_slice.fill(paging::PDEntry::new_null());
+
+            // Set the second entry in PML4 to this new physmem PDPT
+            pml4_slice[1] = paging::PDEntry::from_paddr(pdpt_ptr as usize);
+
+            // Identity-map second 512GB of memory
+            for i in 0..512 {
+                pdpt_slice[i] = paging::PDEntry::huge_from_paddr((1 << 39) + i * 0x4000_0000);
+            };
+
             // Next, make sure the framebuffer is identity-mapped
-            if karg.get_fb().get_fb() as usize >= phys_max {
-                let fbaddr = karg.get_fb().get_fb() as usize;
-                let fb_pml4i = fbaddr >> 39;
-                if fb_pml4i != 0 {
+            let fbptr = karg.get_fb().get_fb();
+            write!(karg.get_fb(), "FB {:#?}, phys_max: {:#018x}\n", fbptr, phys_max).unwrap();
+            /*if fbptr as usize >= phys_max {
+                write!(karg.get_fb(), "FB identity mapped\n").unwrap();
+                let fbaddr = fbptr as usize;
+                let fb_pml4i = (fbaddr >> 39) & 0x1ff;
+                let fb_pdpi = (fbaddr >> 30) & 0x1ff;
+                write!(karg.get_fb(), "FB PML4i: {:#018x}\n", fb_pml4i).unwrap();
+                if fb_pml4i > 0 {
                     // Need to make a new PML4 entry for framebuffer, and PDPT
                     // Allocate new PDPT table
                     let fb_pdpt_ptr = system_table
@@ -522,15 +549,21 @@ fn hello_main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Stat
                             1,
                         )
                         .unwrap() as *mut paging::PDEntry;
+                    write!(karg.get_fb(), "FB PDPT: {:#018x}\n", fb_pdpt_ptr as usize).unwrap();
                     let fb_pdpt_slice = unsafe { core::slice::from_raw_parts_mut::<paging::PDEntry>(fb_pdpt_ptr, 512) };
                     fb_pdpt_slice.fill(paging::PDEntry::new_null());
 
-                    let fb_pdpt_idx = (fbaddr >> 30) & 0x1ff;
-                    fb_pdpt_slice[fb_pdpt_idx] = paging::PDEntry::huge_from_paddr(fbaddr);
+                    write!(karg.get_fb(), "FB PDPi: {:#018x}\n", fb_pdpi).unwrap();
+                    fb_pdpt_slice[fb_pdpi] = paging::PDEntry::huge_from_paddr(fbaddr & !0xfff);
+                    write!(karg.get_fb(), "FB PDP entry: {:?}\n", fb_pdpt_slice[fb_pdpi]).unwrap();
 
                     pml4_slice[fb_pml4i] = paging::PDEntry::from_paddr(fb_pdpt_ptr as usize);
+                    write!(karg.get_fb(), "FB PML4 entry: {:?}\n", pml4_slice[fb_pml4i]).unwrap();
+                } else {
+                    write!(karg.get_fb(), "FB PDPTi: {:#018x}\n", fb_pdpi).unwrap();
+                    pdpt_slice[fb_pdpi] = paging::PDEntry::huge_from_paddr(fbaddr & !0xfff);
                 }
-            }
+            }*/
 
             // Allocate kernel image PDPT table
             let kpdpt_ptr = system_table
@@ -607,7 +640,7 @@ fn hello_main(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Stat
                 )
             };
 
-            write!(karg.get_fb(), "Identity pages loaded for first {}GiB of ram\n", phys_max / 0x4000_0000).unwrap();
+            write!(karg.get_fb(), "Identity pages loaded for first {}GiB of ram\n", /*phys_max / 0x4000_0000*/1024).unwrap();
 
             if let Some(dyndata) = elfdata.dynamic {
                 for dynentry in dyndata.dyns {
