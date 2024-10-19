@@ -11,7 +11,7 @@ use embedded_graphics::{
 };
 
 #[derive(Clone, Copy, Debug)]
-pub struct FrameBuffer {
+pub struct UnsafeFrameBuffer {
     fbptr: *mut u8,
     fx: usize,
     fy: usize,
@@ -25,9 +25,9 @@ pub struct FrameBuffer {
     format: uefi::proto::console::gop::PixelFormat,
 }
 
-impl Default for FrameBuffer {
+impl Default for UnsafeFrameBuffer {
     fn default() -> Self {
-        FrameBuffer {
+        UnsafeFrameBuffer {
             fbptr: core::ptr::null_mut(),
             fx: 0,
             fy: 0,
@@ -43,13 +43,13 @@ impl Default for FrameBuffer {
     }
 }
 
-impl OriginDimensions for FrameBuffer {
+impl OriginDimensions for UnsafeFrameBuffer {
     fn size(&self) -> embedded_graphics::geometry::Size {
         embedded_graphics::geometry::Size::new(self.fx as u32, self.fy as u32)
     }
 }
 
-impl DrawTarget for FrameBuffer {
+impl DrawTarget for UnsafeFrameBuffer {
     type Error = core::convert::Infallible;
     type Color = embedded_graphics::pixelcolor::Rgb888;
 
@@ -73,7 +73,7 @@ impl DrawTarget for FrameBuffer {
     }
 }
 
-impl Write for FrameBuffer {
+impl Write for UnsafeFrameBuffer {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         /* TODO - smarter about breaking too-long strings. */
         for i in 0..s.len() {
@@ -110,7 +110,7 @@ impl Write for FrameBuffer {
     }
 }
 
-impl FrameBuffer {
+impl UnsafeFrameBuffer {
     pub fn clear_console(&mut self) {
         let _ = self.clear(Rgb888::new(0, 0, 0));
         self.txtcur_x = 0;
@@ -135,8 +135,8 @@ impl FrameBuffer {
         rmask: u32,
         gmask: u32,
         bmask: u32,
-    ) -> FrameBuffer {
-        FrameBuffer {
+    ) -> UnsafeFrameBuffer {
+        UnsafeFrameBuffer {
             fbptr,
             fx,
             fy,

@@ -24,15 +24,15 @@ use uefi::proto::console::gop::GraphicsOutput;
 
 use uefi::mem::memory_map::MemoryMap;
 
-use crate::framebuffer::FrameBuffer;
+use crate::framebuffer::UnsafeFrameBuffer;
 use crate::identity_acpi_handler::IdentityAcpiHandler;
 use crate::kernel_args::{KernelArgs, OSMemEntry};
 
-impl From<&mut GraphicsOutput> for FrameBuffer {
-    fn from(gfx: &mut GraphicsOutput) -> FrameBuffer {
+impl From<&mut GraphicsOutput> for UnsafeFrameBuffer {
+    fn from(gfx: &mut GraphicsOutput) -> UnsafeFrameBuffer {
         let cur_mode = gfx.current_mode_info();
         let mut uefifb = gfx.frame_buffer();
-        FrameBuffer::new(
+        UnsafeFrameBuffer::new(
             uefifb.as_mut_ptr(),
             uefifb.size(),
             cur_mode.resolution().0,
@@ -72,7 +72,7 @@ impl From<&uefi::table::boot::MemoryDescriptor> for OSMemEntry {
 const MAX_WIDTH: usize = 1920;
 const MAX_HEIGHT: usize = 1080;
 
-fn set_mode(st: &SystemTable<Boot>) -> FrameBuffer {
+fn set_mode(st: &SystemTable<Boot>) -> UnsafeFrameBuffer {
     let mut gfx = st
         .boot_services()
         .get_handle_for_protocol::<uefi::proto::console::gop::GraphicsOutput>()

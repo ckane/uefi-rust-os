@@ -1,4 +1,4 @@
-use crate::framebuffer::FrameBuffer;
+use crate::framebuffer::UnsafeFrameBuffer;
 use core::ffi::c_void;
 use uefi::table::cfg::{ConfigTableEntry, ACPI2_GUID, ACPI_GUID, SMBIOS3_GUID, SMBIOS_GUID};
 
@@ -39,8 +39,8 @@ pub struct KernelArgs {
     /// Number of pages allocated for kernel
     kern_pages: usize,
 
-    /// The FrameBuffer
-    fb: FrameBuffer,
+    /// The unsafe FrameBuffer
+    fb: UnsafeFrameBuffer,
 }
 
 // Initially populate an empty struct with every value set to 0. We cannot derive this
@@ -158,11 +158,11 @@ impl KernelArgs {
         self.kern_pages
     }
 
-    pub fn set_fb(&mut self, newfb: FrameBuffer) {
+    pub fn set_fb(&mut self, newfb: UnsafeFrameBuffer) {
         self.fb = newfb;
     }
 
-    pub fn get_fb(&mut self) -> &mut FrameBuffer {
+    pub fn get_fb(&mut self) -> &mut UnsafeFrameBuffer {
         &mut self.fb
     }
 }
