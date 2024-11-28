@@ -9,7 +9,7 @@ edition = "2021"
 acpi = "5"
 raw-cpuid = "11"
 #elf = { version = "0.7", default-features = false }
-goblin = { version = "0.8", default-features = false, features = ["elf64", "elf32", "pe32", "pe64"] }
+goblin = { version = "0.9", default-features = false, features = ["elf64", "elf32", "pe32", "pe64"] }
 embedded-graphics = "0.8"
 log = "0.4"
 uefi = { version = "0.32", features = ["global_allocator", "logger", "panic_handler"] }
